@@ -1,0 +1,39 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "${{TEAMS_APP_ID}}",
+  "developer": {
+    "name": "Microsoft Agents Starter Kit",
+    "websiteUrl": "https://github.com/microsoft/agent-framework",
+    "privacyUrl": "https://github.com/microsoft/agent-framework",
+    "termsOfUseUrl": "https://github.com/microsoft/agent-framework"
+  },
+  "name": {
+    "short": "Agents Starter Kit",
+    "full": "Microsoft Agents Starter Kit - Orchestrator with Sub-Agents"
+  },
+  "description": {
+    "short": "Multi-agent orchestrator starter kit",
+    "full": "A starter kit for a multi-agent orchestrator built with Microsoft Agent Framework. Includes an orchestrator agent that delegates to specialist sub-agents via the agent-as-tool pattern."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#60A18E",
+  "bots": [
+    {
+      "botId": "${{BOT_ID}}",
+      "scopes": ["personal", "team", "groupChat"],
+      "supportsFiles": false,
+      "isNotificationOnly": false
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": ["${{BOT_DOMAIN}}"],
+  "webApplicationInfo": {
+    "id": "${{BOT_ID}}",
+    "resource": "api://${{BOT_DOMAIN}}/${{BOT_ID}}"
+  }
+}

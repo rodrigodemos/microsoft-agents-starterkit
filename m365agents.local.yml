@@ -1,0 +1,76 @@
+# yaml-language-server: $schema=https://aka.ms/m365-agents-toolkits/v1.11/yaml.schema.json
+# Local development configuration for Microsoft Agents Starter Kit
+version: v1.11
+
+provision:
+  # Creates a Teams app
+  - uses: teamsApp/create
+    with:
+      name: AgentsStarterKit${{APP_NAME_SUFFIX}}
+    writeToEnvironmentFile:
+      teamsAppId: TEAMS_APP_ID
+
+  # Create or reuse an existing Microsoft Entra application for bot
+  - uses: aadApp/create
+    with:
+      name: AgentsStarterKit${{APP_NAME_SUFFIX}}
+      generateClientSecret: true
+      generateServicePrincipal: true
+      signInAudience: AzureADMultipleOrgs
+    writeToEnvironmentFile:
+      clientId: BOT_ID
+      clientSecret: SECRET_BOT_PASSWORD
+      objectId: BOT_OBJECT_ID
+
+  # Create or update the bot registration on dev.botframework.com
+  - uses: botFramework/create
+    with:
+      botId: ${{BOT_ID}}
+      name: AgentsStarterKit
+      messagingEndpoint: ${{BOT_ENDPOINT}}/api/messages
+      description: "Multi-agent orchestrator starter kit"
+      channels:
+        - name: msteams
+
+  # Build app package with latest env value
+  - uses: teamsApp/zipAppPackage
+    with:
+      manifestPath: ./appPackage/manifest.json
+      outputZipPath: ./appPackage/build/appPackage.${{TEAMSFX_ENV}}.zip
+      outputFolder: ./appPackage/build
+
+  # Validate app package
+  - uses: teamsApp/validateAppPackage
+    with:
+      appPackagePath: ./appPackage/build/appPackage.${{TEAMSFX_ENV}}.zip
+
+  # Apply the app manifest
+  - uses: teamsApp/update
+    with:
+      appPackagePath: ./appPackage/build/appPackage.${{TEAMSFX_ENV}}.zip
+
+deploy:
+  # Generate runtime environment variables
+  - uses: file/createOrUpdateEnvironmentFile
+    with:
+      target: ./.env
+      envs:
+        PORT: 3978
+        # Azure OpenAI
+        AZURE_OPENAI_ENDPOINT: ${{AZURE_OPENAI_ENDPOINT}}
+        AZURE_OPENAI_DEPLOYMENT: ${{AZURE_OPENAI_DEPLOYMENT}}
+        AZURE_OPENAI_API_VERSION: ${{AZURE_OPENAI_API_VERSION}}
+        # M365 Auth
+        CLIENT_ID: ${{BOT_ID}}
+        TENANT_ID: ${{TEAMS_APP_TENANT_ID}}
+        # SSO / OBO auth handler
+        AUTH_HANDLER_NAME: AGENTIC
+        CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTID: ${{BOT_ID}}
+        CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTSECRET: ${{SECRET_BOT_PASSWORD}}
+        CONNECTIONS__SERVICE_CONNECTION__SETTINGS__TENANTID: ${{TEAMS_APP_TENANT_ID}}
+        CONNECTIONS__SERVICE_CONNECTION__SETTINGS__SCOPES: ""
+        AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__TYPE: AgenticUserAuthorization
+        AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__SCOPES: "https://graph.microsoft.com/.default"
+        AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__ALTERNATEBLUEPRINTCONNECTIONNAME: "https://graph.microsoft.com/.default"
+        CONNECTIONSMAP_0_SERVICEURL: "*"
+        CONNECTIONSMAP_0_CONNECTION: SERVICE_CONNECTION

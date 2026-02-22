@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+
+# Environment files (contain secrets or environment-specific data)
+.env
+env/.env.local
+env/.env.local.user
+
+# IDE
+.vscode/.ropeproject/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Agents Toolkit build artifacts
+appPackage/build/
+
+# UV
+uv.lock
+
+# Misc
+*.log
+.python-version

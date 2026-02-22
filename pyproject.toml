@@ -1,0 +1,71 @@
+[project]
+name = "microsoft-agents-starterkit"
+version = "0.1.0"
+description = "Starter kit for a multi-agent orchestrator using Microsoft Agent Framework, hosted in Teams via M365 Agents SDK"
+authors = [
+    { name = "Microsoft", email = "support@microsoft.com" }
+]
+dependencies = [
+    # Agent Framework SDK
+    "agent-framework",
+    "agent-framework-azure-ai",
+
+    # Azure AI dependencies
+    "azure-ai-agents>=1.2.0b5",
+    "azure-ai-projects>=2.0.0b2",
+
+    # Microsoft Agents SDK — hosting and integration
+    "microsoft-agents-hosting-aiohttp",
+    "microsoft-agents-hosting-core",
+    "microsoft-agents-authentication-msal",
+    "microsoft-agents-activity",
+
+    # Azure SDK
+    "azure-identity",
+
+    # Core dependencies
+    "python-dotenv",
+    "aiohttp",
+
+    # HTTP server
+    "uvicorn[standard]>=0.20.0",
+    "fastapi>=0.100.0",
+
+    # HTTP client
+    "httpx>=0.24.0",
+
+    # Data validation
+    "pydantic>=2.0.0",
+
+    # Utilities
+    "typing-extensions>=4.0.0",
+
+    # Microsoft Agent 365 SDK packages
+    "microsoft_agents_a365_tooling>=0.1.0",
+    "microsoft_agents_a365_tooling_extensions_agentframework>=0.1.0",
+    "microsoft_agents_a365_observability_core>=0.1.0",
+    "microsoft_agents_a365_observability_extensions_agent_framework>=0.1.0",
+    "microsoft_agents_a365_runtime>=0.1.0",
+    "microsoft_agents_a365_notifications>=0.1.0",
+]
+requires-python = ">=3.11"
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true
+
+[tool.uv]
+prerelease = "allow"
+dev-dependencies = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
