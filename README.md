@@ -84,20 +84,17 @@ All the Agents Toolkit files are already included in this starter kit (`m365agen
    - A **dev tunnel** to expose your local server to Teams
 5. The deploy step auto-generates `.env` in the project root with all runtime variables (CLIENT_ID, TENANT_ID, Azure OpenAI, SSO/OBO settings). **Do not edit `.env` directly** — update values in `env/.env.local` instead.
 
-### 4. Test with Agents Playground (offline)
+### 4. Run standalone (without Teams)
 
-Use the playground environment for offline testing without a Teams tenant:
-
-1. In the Agents Toolkit panel, select **Playground** environment
-2. Click **Debug** — this installs the test tool and starts your agent locally
-
-### 5. Run standalone (without Teams)
+For quick local iteration without Teams, use the Agent Framework DevUI — a built-in web chat interface:
 
 ```bash
-uv run python start.py
+uv run python test_standalone.py
 ```
 
-The server starts on `http://localhost:3978/api/messages`. Useful for testing with REST clients.
+This opens a browser at `http://localhost:8080` with a chat UI connected directly to the orchestrator agent (with the comedian tool). No Teams, no Bot Framework, no authentication required — just the agent framework and Azure OpenAI.
+
+> **Note:** SSO/OBO is not available in standalone mode. For full end-to-end testing with user identity, use the Teams debug flow (step 3).
 
 ## How to Add a New Agent
 

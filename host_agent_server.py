@@ -122,8 +122,8 @@ class GenericAgentHost:
             logger.warning(f"Failed to cache observability token: {e}")
 
     async def _validate_agent_and_setup_context(self, context: TurnContext):
-        tenant_id = context.activity.recipient.tenant_id
-        agent_id = context.activity.recipient.agentic_app_id
+        tenant_id = getattr(context.activity.recipient, 'tenant_id', None) or "local"
+        agent_id = getattr(context.activity.recipient, 'agentic_app_id', None) or "local"
 
         if not self.agent_instance:
             logger.error("Agent not available")
