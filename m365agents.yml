@@ -1,9 +1,6 @@
 # yaml-language-server: $schema=https://aka.ms/m365-agents-toolkits/v1.11/yaml.schema.json
 # Microsoft Agents Starter Kit — base project configuration
 version: v1.11
-projectId: 12839d21-0f35-456a-8f02-ea88f1bf85d7
-
-# projectId: de3f404e-89d1-4d5d-a8ac-f827a64cb35a
 
 # Environment-specific configs:
 #   m365agents.local.yml       — local debug with Teams sideloading
