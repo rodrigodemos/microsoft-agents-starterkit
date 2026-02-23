@@ -28,7 +28,7 @@ Thumbs.db
 appPackage/build/
 
 # UV
-uv.lock
+# uv.lock
 
 # Misc
 *.log

@@ -30,18 +30,16 @@ from microsoft_agents_a365.observability.extensions.agentframework.trace_instrum
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-ORCHESTRATOR_INSTRUCTIONS = """You are a helpful AI assistant that orchestrates specialist agents.
+ORCHESTRATOR_INSTRUCTIONS = """You are an orchestrator agent. Your ONLY job is to route user requests to the appropriate specialist agent.
 
-You have access to the following specialist agents as tools:
-- **Comedian**: Tell jokes and funny stories. Use this when the user asks for humor, jokes, or entertainment.
+You have access to specialist agents registered as tools. ALWAYS delegate to a matching specialist — do NOT answer domain questions yourself.
 
 ROUTING RULES:
-- If the user asks for a joke, something funny, or humor → delegate to the Comedian tool.
-- For general questions, answer directly using your own knowledge.
-- You can combine your own response with a specialist's output when appropriate.
-- Always be helpful, friendly, and professional.
-
-IMPORTANT: When delegating to a specialist, pass the user's full request as the input."""
+1. Examine the user's request and determine which specialist tool is the best match.
+2. If a specialist tool matches, delegate the FULL user request to it and return its response.
+3. Only respond directly if NO specialist tool matches the request (e.g., greetings, meta-questions about your capabilities).
+4. NEVER attempt to handle a topic that a specialist covers — always delegate.
+5. When no specialist matches, briefly explain what you can help with by listing available specialists."""
 
 
 class OrchestratorAgent(AgentInterface):
@@ -59,9 +57,9 @@ class OrchestratorAgent(AgentInterface):
     def _enable_instrumentation(self):
         try:
             AgentFrameworkInstrumentor().instrument()
-            logger.info("✅ Instrumentation enabled")
+            logger.info("Instrumentation enabled")
         except Exception as e:
-            logger.warning(f"⚠️ Instrumentation failed: {e}")
+            logger.warning(f"Instrumentation failed: {e}")
 
     def _create_client(self):
         """Create the shared Azure OpenAI chat client using Entra ID (MI → CLI chain)."""
@@ -89,7 +87,7 @@ class OrchestratorAgent(AgentInterface):
             deployment_name=deployment,
             api_version=api_version,
         )
-        logger.info("✅ AzureOpenAIChatClient created")
+        logger.info("AzureOpenAIChatClient created")
 
     def _create_agents(self):
         """Create the orchestrator and register sub-agents as tools."""
@@ -108,7 +106,7 @@ class OrchestratorAgent(AgentInterface):
             instructions=ORCHESTRATOR_INSTRUCTIONS,
             tools=tools,
         )
-        logger.info(f"✅ Orchestrator created with {len(tools)} sub-agent tool(s)")
+        logger.info(f"Orchestrator created with {len(tools)} sub-agent tool(s)")
 
     def _initialize_services(self):
         try:
@@ -116,9 +114,9 @@ class OrchestratorAgent(AgentInterface):
                 McpToolRegistrationService,
             )
             self.tool_service = McpToolRegistrationService()
-            logger.info("✅ MCP tool service initialized")
+            logger.info("MCP tool service initialized")
         except Exception as e:
-            logger.warning(f"⚠️ MCP tool service failed: {e}")
+            logger.warning(f"MCP tool service failed: {e}")
             self.tool_service = None
 
     async def setup_mcp_servers(self, auth: Authorization, auth_handler_name: Optional[str], context: TurnContext):
@@ -127,23 +125,27 @@ class OrchestratorAgent(AgentInterface):
             return
         try:
             if not self.tool_service:
+                self.mcp_servers_initialized = True
                 return
 
-            # Always use agentic auth — user identity flows through to tools via OBO
+            # Preserve existing sub-agent tools (comedian, etc.) when adding MCP tools
+            existing_tools = list(self.agent._tools) if hasattr(self.agent, '_tools') else []
+
             self.agent = await self.tool_service.add_tool_servers_to_agent(
                 chat_client=self.chat_client,
                 agent_instructions=ORCHESTRATOR_INSTRUCTIONS,
-                initial_tools=[],
+                initial_tools=existing_tools,
                 auth=auth,
                 auth_handler_name=auth_handler_name,
                 turn_context=context,
             )
 
             if self.agent:
-                logger.info("✅ MCP setup completed (agentic auth / OBO)")
-                self.mcp_servers_initialized = True
+                logger.info("MCP setup completed (agentic auth / OBO)")
+            self.mcp_servers_initialized = True
         except Exception as e:
             logger.error(f"MCP setup error: {e}")
+            self.mcp_servers_initialized = True
 
     # --- AgentInterface implementation ---
 
@@ -158,7 +160,7 @@ class OrchestratorAgent(AgentInterface):
             result = await self.agent.run(message)
             return self._extract_result(result) or "I couldn't process your request at this time."
         except Exception as e:
-            logger.error(f"Error processing message: {e}")
+            logger.error(f"Error processing message: {e}", exc_info=True)
             return f"Sorry, I encountered an error: {str(e)}"
 
     async def cleanup(self) -> None:

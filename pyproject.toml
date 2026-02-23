@@ -40,6 +40,9 @@ dependencies = [
     # Utilities
     "typing-extensions>=4.0.0",
 
+    # Pin: 0.4.14 removed SpanAttributes.LLM_SYSTEM which agent-framework-core requires
+    "opentelemetry-semantic-conventions-ai==0.4.13",
+
     # Microsoft Agent 365 SDK packages
     "microsoft_agents_a365_tooling>=0.1.0",
     "microsoft_agents_a365_tooling_extensions_agentframework>=0.1.0",

@@ -39,6 +39,6 @@ class LocalAuthenticationOptions:
         load_dotenv()
         env_id = os.getenv(env_id_var, "")
         bearer_token = os.getenv(token_var, "")
-        print(f"🔧 Environment ID: {env_id[:20]}{'...' if len(env_id) > 20 else ''}")
-        print(f"🔧 Bearer Token: {'***' if bearer_token else 'NOT SET'}")
+        print(f"Environment ID: {env_id[:20]}{'...' if len(env_id) > 20 else ''}")
+        print(f"Bearer Token: {'***' if bearer_token else 'NOT SET'}")
         return cls(env_id=env_id, bearer_token=bearer_token)

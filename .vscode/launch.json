@@ -28,8 +28,6 @@
       "type": "msedge",
       "request": "launch",
       "url": "https://teams.microsoft.com/l/app/${{local:TEAMS_APP_ID}}?installAppPackage=true&webjoin=true&${account-hint}",
-      "userDataDir": true,
-      "runtimeArgs": ["--profile-directory=Profile 6"],
       "presentation": {
         "group": "all",
         "hidden": true

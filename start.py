@@ -21,7 +21,7 @@ def main():
         print()
         create_and_run_host(OrchestratorAgent)
     except Exception as e:
-        print(f"❌ Failed to start server: {e}")
+        print(f"Failed to start server: {e}")
         import traceback
         traceback.print_exc()
         return 1

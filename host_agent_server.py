@@ -45,12 +45,15 @@ from microsoft_agents_a365.observability.core.middleware.baggage_builder import 
 from microsoft_agents_a365.runtime.environment_utils import get_observability_authentication_scope
 from token_cache import cache_agentic_token
 
-ms_agents_logger = logging.getLogger("microsoft_agents")
-ms_agents_logger.addHandler(logging.StreamHandler())
-ms_agents_logger.setLevel(logging.INFO)
+# Configure app-level logging
+logging.basicConfig(level=logging.INFO, format="%(name)s - %(message)s")
 
-observability_logger = logging.getLogger("microsoft_agents_a365.observability")
-observability_logger.setLevel(logging.ERROR)
+# Suppress noisy SDK loggers
+for noisy in ["microsoft_agents", "microsoft_agents_a365", "httpx", "opentelemetry", "azure", "aiohttp"]:
+    noisy_logger = logging.getLogger(noisy)
+    noisy_logger.setLevel(logging.WARNING)
+    noisy_logger.handlers.clear()
+    noisy_logger.propagate = True
 
 logger = logging.getLogger(__name__)
 
@@ -82,9 +85,9 @@ class GenericAgentHost:
 
         self.auth_handler_name = os.getenv("AUTH_HANDLER_NAME", "") or None
         if self.auth_handler_name:
-            logger.info(f"🔐 Using auth handler: {self.auth_handler_name}")
+            logger.info(f"Auth handler: {self.auth_handler_name}")
         else:
-            logger.info("🔓 No auth handler configured (AUTH_HANDLER_NAME not set)")
+            logger.info("No auth handler configured (AUTH_HANDLER_NAME not set)")
 
         self.agent_class = agent_class
         self.agent_args = agent_args
@@ -103,7 +106,7 @@ class GenericAgentHost:
         )
         self.agent_notification = AgentNotification(self.agent_app)
         self._setup_handlers()
-        logger.info("✅ Notification handlers registered")
+        logger.info("Notification handlers registered")
 
     async def _setup_observability_token(self, context: TurnContext, tenant_id: str, agent_id: str):
         if not self.auth_handler_name:
@@ -116,7 +119,7 @@ class GenericAgentHost:
             )
             cache_agentic_token(tenant_id, agent_id, exaau_token.token)
         except Exception as e:
-            logger.warning(f"⚠️ Failed to cache observability token: {e}")
+            logger.warning(f"Failed to cache observability token: {e}")
 
     async def _validate_agent_and_setup_context(self, context: TurnContext):
         tenant_id = context.activity.recipient.tenant_id
@@ -124,7 +127,7 @@ class GenericAgentHost:
 
         if not self.agent_instance:
             logger.error("Agent not available")
-            await context.send_activity("❌ Sorry, the agent is not available.")
+            await context.send_activity("Sorry, the agent is not available.")
             return None
 
         await self._setup_observability_token(context, tenant_id, agent_id)
@@ -132,12 +135,10 @@ class GenericAgentHost:
 
     def _setup_handlers(self):
         handler_config = {"auth_handlers": [self.auth_handler_name]} if self.auth_handler_name else {}
-        # Also register without auth for debugging
-        logger.info(f"🔧 Handler config: {handler_config}")
 
         async def help_handler(context: TurnContext, _: TurnState):
             await context.send_activity(
-                f"👋 **Hi there!** I'm **{self.agent_class.__name__}**, your AI assistant.\n\n"
+                f"Hi there! I'm **{self.agent_class.__name__}**, your AI assistant.\n\n"
                 "How can I help you today?"
             )
 
@@ -147,10 +148,8 @@ class GenericAgentHost:
         @self.agent_app.activity("message")
         async def on_message(context: TurnContext, _: TurnState):
             try:
-                logger.info(f"🔔 on_message triggered, activity type: {context.activity.type}, text: {context.activity.text}")
                 result = await self._validate_agent_and_setup_context(context)
                 if result is None:
-                    logger.warning("⚠️ _validate_agent_and_setup_context returned None")
                     return
                 tenant_id, agent_id = result
 
@@ -159,14 +158,14 @@ class GenericAgentHost:
                     if not user_message.strip() or user_message.strip() == "/help":
                         return
 
-                    logger.info(f"📨 {user_message}")
+                    logger.info(f">> {user_message}")
                     response = await self.agent_instance.process_user_message(
                         user_message, self.agent_app.auth, self.auth_handler_name, context
                     )
-                    logger.info(f"📤 Response: {str(response)[:200]}")
+                    logger.info(f"<< {str(response)[:200]}")
                     await context.send_activity(response)
             except Exception as e:
-                logger.error(f"❌ Error: {e}", exc_info=True)
+                logger.error(f"Error: {e}", exc_info=True)
                 await context.send_activity(f"Sorry, I encountered an error: {str(e)}")
 
         @self.agent_notification.on_agent_notification(
@@ -185,7 +184,7 @@ class GenericAgentHost:
                 tenant_id, agent_id = result
 
                 with BaggageBuilder().tenant_id(tenant_id).agent_id(agent_id).build():
-                    logger.info(f"📬 {notification_activity.notification_type}")
+                    logger.info(f"Notification: {notification_activity.notification_type}")
 
                     if not hasattr(self.agent_instance, "handle_agent_notification_activity"):
                         await context.send_activity("This agent doesn't support notification handling yet.")
@@ -202,12 +201,12 @@ class GenericAgentHost:
 
                     await context.send_activity(response)
             except Exception as e:
-                logger.error(f"❌ Notification error: {e}")
+                logger.error(f"Notification error: {e}")
                 await context.send_activity(f"Sorry, I encountered an error processing the notification: {str(e)}")
 
     async def initialize_agent(self):
         if self.agent_instance is None:
-            logger.info(f"🤖 Initializing {self.agent_class.__name__}...")
+            logger.info(f"Initializing {self.agent_class.__name__}...")
             self.agent_instance = self.agent_class(*self.agent_args, **self.agent_kwargs)
             await self.agent_instance.initialize()
 
@@ -217,14 +216,14 @@ class GenericAgentHost:
         tenant_id = environ.get("TENANT_ID")
 
         if client_id and tenant_id:
-            logger.info("🔒 Using Entra ID authentication (SSO / OBO enabled)")
+            logger.info("Using Entra ID authentication (SSO / OBO enabled)")
             return AgentAuthConfiguration(
                 client_id=client_id,
                 tenant_id=tenant_id,
                 scopes=["5a807f24-c9de-44ee-a3a7-329e88a00ffc/.default"],
             )
 
-        logger.warning("⚠️ No CLIENT_ID/TENANT_ID set; running in anonymous dev mode")
+        logger.warning("No CLIENT_ID/TENANT_ID set; running in anonymous dev mode")
         return None
 
     def start_server(self, auth_configuration: AgentAuthConfiguration | None = None):
@@ -278,17 +277,17 @@ class GenericAgentHost:
                 port = desired_port + 1
 
         print("=" * 80)
-        print(f"🏢 {self.agent_class.__name__}")
+        print(f"{self.agent_class.__name__}")
         print("=" * 80)
-        print(f"🔒 Auth: {'Enabled' if auth_configuration else 'Anonymous'}")
-        print(f"🚀 Server: localhost:{port}")
-        print(f"📚 Endpoint: http://localhost:{port}/api/messages")
-        print(f"❤️  Health: http://localhost:{port}/api/health\n")
+        print(f"Auth: {'Enabled' if auth_configuration else 'Anonymous'}")
+        print(f"Server: localhost:{port}")
+        print(f"Endpoint: http://localhost:{port}/api/messages")
+        print(f"Health: http://localhost:{port}/api/health\n")
 
         try:
             run_app(app, host="localhost", port=port, handle_signals=True)
         except KeyboardInterrupt:
-            print("\n👋 Server stopped")
+            print("\nServer stopped")
 
     async def cleanup(self):
         if self.agent_instance:
