@@ -284,8 +284,10 @@ class GenericAgentHost:
         print(f"Endpoint: http://localhost:{port}/api/messages")
         print(f"Health: http://localhost:{port}/api/health\n")
 
+        # Bind to 0.0.0.0 in production (containers), localhost for local dev
+        host = environ.get("HOST", "0.0.0.0")
         try:
-            run_app(app, host="localhost", port=port, handle_signals=True)
+            run_app(app, host=host, port=port, handle_signals=True)
         except KeyboardInterrupt:
             print("\nServer stopped")
 

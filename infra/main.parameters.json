@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "namePrefix": { "value": "${AZURE_NAME_PREFIX}" },
+    "location": { "value": "${AZURE_LOCATION}" },
+    "botClientId": { "value": "${BOT_CLIENT_ID}" },
+    "botTenantId": { "value": "${BOT_TENANT_ID}" },
+    "botClientSecret": { "value": "${BOT_CLIENT_SECRET}" },
+    "createAzureOpenAi": { "value": "${CREATE_AZURE_OPENAI}" },
+    "existingAzureOpenAiEndpoint": { "value": "${AZURE_OPENAI_ENDPOINT}" },
+    "existingAzureOpenAiName": { "value": "${AZURE_OPENAI_RESOURCE_NAME}" },
+    "azureOpenAiDeployment": { "value": "${AZURE_OPENAI_DEPLOYMENT}" },
+    "azureOpenAiApiVersion": { "value": "${AZURE_OPENAI_API_VERSION}" },
+    "azureOpenAiName": { "value": "${AZURE_OPENAI_NAME}" },
+    "aoaiSameResourceGroup": { "value": "${AOAI_SAME_RESOURCE_GROUP}" },
+    "useAcr": { "value": "${CREATE_ACR}" },
+    "acrName": { "value": "${ACR_NAME}" },
+    "acrSku": { "value": "${ACR_SKU}" },
+    "acaName": { "value": "${ACA_NAME}" },
+    "acaCpuCores": { "value": "${ACA_CPU_CORES}" },
+    "acaMemorySize": { "value": "${ACA_MEMORY_SIZE}" },
+    "logAnalyticsName": { "value": "${LOG_ANALYTICS_NAME}" },
+    "useExistingLogAnalytics": { "value": "${USE_EXISTING_LOG_ANALYTICS}" },
+    "existingLogCustomerId": { "value": "${EXISTING_LOG_CUSTOMER_ID}" },
+    "existingLogSharedKey": { "value": "${EXISTING_LOG_SHARED_KEY}" },
+    "acaEnvironmentName": { "value": "${ACA_ENVIRONMENT_NAME}" },
+    "botServiceName": { "value": "${BOT_SERVICE_NAME}" }
+  }
+}

@@ -14,6 +14,11 @@ build/
 .env
 env/.env.local
 env/.env.local.user
+env/.env.azure
+env/.env.azure.user
+
+# Azure Developer CLI
+.azure/
 
 # IDE
 .vscode/.ropeproject/
@@ -26,6 +31,7 @@ Thumbs.db
 
 # Agents Toolkit build artifacts
 appPackage/build/
+infra/entra/build/
 
 # UV
 # uv.lock

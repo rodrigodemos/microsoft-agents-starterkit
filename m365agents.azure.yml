@@ -1,14 +1,10 @@
 # yaml-language-server: $schema=https://aka.ms/m365-agents-toolkits/v1.11/yaml.schema.json
-# Microsoft Agents Starter Kit — base project configuration
-# Environment-specific overrides are in m365agents.{env}.yml
+# Azure production configuration for Microsoft Agents Starter Kit
+# Used AFTER 'azd up' to publish the Teams app manifest.
+# App registration and Azure Bot Service are created by azd up.
 version: v1.11
 
-environmentFolderPath: ./env
-
 provision:
-  # Overridden by m365agents.local.yml and m365agents.playground.yml.
-  # The steps below run for the Azure environment (after 'azd up').
-
   # Creates a Teams app
   - uses: teamsApp/create
     with:
@@ -35,7 +31,7 @@ provision:
     with:
       appPackagePath: ./appPackage/build/appPackage.${{TEAMSFX_ENV}}.zip
 
-  # Apply the app manifest
+  # Apply the app manifest (publish to org)
   - uses: teamsApp/update
     with:
       appPackagePath: ./appPackage/build/appPackage.${{TEAMSFX_ENV}}.zip
@@ -54,4 +50,3 @@ provision:
     writeToEnvironmentFile:
       titleId: M365_TITLE_ID
       appId: M365_APP_ID
-projectId: cf12b461-c9e0-4f05-9d5b-9e00908df26f

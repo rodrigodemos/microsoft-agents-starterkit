@@ -1,0 +1,20 @@
+name: microsoft-agents-starterkit
+metadata:
+  template: microsoft-agents-starterkit@0.0.1
+services:
+  agent:
+    project: .
+    language: py
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+hooks:
+  preprovision:
+    shell: pwsh
+    run: hooks/preprovision.ps1
+    interactive: true
+  postprovision:
+    shell: pwsh
+    run: hooks/postprovision.ps1
+    interactive: true

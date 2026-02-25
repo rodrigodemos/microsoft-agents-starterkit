@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+.git/
+.github/
+.vscode/
+env/
+appPackage/build/
+infra/
+*.md
+*.log
+.env
+.env.*
+.gitignore
+.dockerignore

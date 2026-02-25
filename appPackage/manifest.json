@@ -1,6 +1,6 @@
 {
-  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
-  "manifestVersion": "1.17",
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.22/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.22",
   "version": "1.0.0",
   "id": "${{TEAMS_APP_ID}}",
   "developer": {
@@ -25,15 +25,34 @@
   "bots": [
     {
       "botId": "${{BOT_ID}}",
-      "scopes": ["personal", "team", "groupChat"],
+      "scopes": ["copilot", "personal", "team", "groupChat"],
       "supportsFiles": false,
-      "isNotificationOnly": false
+      "isNotificationOnly": false,
+      "commandLists": [
+        {
+          "scopes": ["copilot", "personal", "team", "groupChat"],
+          "commands": [
+            {
+              "title": "Help",
+              "description": "What can you do?"
+            }
+          ]
+        }
+      ]
     }
   ],
+  "copilotAgents": {
+    "customEngineAgents": [
+      {
+        "id": "${{BOT_ID}}",
+        "type": "bot"
+      }
+    ]
+  },
   "permissions": ["identity", "messageTeamMembers"],
-  "validDomains": ["${{BOT_DOMAIN}}"],
+  "validDomains": ["${{BOT_DOMAIN}}", "token.botframework.com"],
   "webApplicationInfo": {
     "id": "${{BOT_ID}}",
-    "resource": "api://${{BOT_DOMAIN}}/${{BOT_ID}}"
+    "resource": "api://botid-${{BOT_ID}}"
   }
 }
