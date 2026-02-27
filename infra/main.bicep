@@ -152,11 +152,11 @@ module openAi 'modules/azure-openai.bicep' = if (createAzureOpenAi) {
 }
 
 // Resolve the Azure OpenAI endpoint and resource name
-var aoaiEndpoint = createAzureOpenAi ? openAi.outputs.endpoint : existingAzureOpenAiEndpoint
-var aoaiName = createAzureOpenAi ? openAi.outputs.name : existingAzureOpenAiName
+var aoaiEndpoint = createAzureOpenAi ? openAi!.outputs.endpoint : existingAzureOpenAiEndpoint
+var aoaiName = createAzureOpenAi ? openAi!.outputs.name : existingAzureOpenAiName
 
 // Resolve the ACR login server for both new and existing ACR
-var resolvedAcrLoginServer = useAcr ? acr.outputs.loginServer : (acrName != '' ? '${acrName}.azurecr.io' : '')
+var resolvedAcrLoginServer = useAcr ? acr!.outputs.loginServer : (acrName != '' ? '${acrName}.azurecr.io' : '')
 
 // Container App
 module aca 'modules/container-app.bicep' = {
@@ -174,7 +174,7 @@ module aca 'modules/container-app.bicep' = {
     botClientSecret: botClientSecret
     cpuCores: acaCpuCores
     memorySize: acaMemorySize
-    acrLoginServer: resolvedAcrLoginServer
+    acrLoginServer: '' // Registry is configured by azd deploy after postprovision assigns AcrPull
     tags: azdServiceTags
   }
 }

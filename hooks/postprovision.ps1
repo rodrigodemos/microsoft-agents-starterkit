@@ -1,5 +1,25 @@
 # postprovision.ps1 — Handles cross-RG AOAI role assignment and generates env/.env.azure
 
+# ─── Helpers ─────────────────────────────────────────────────────────────────────
+
+function Get-AzdEnv {
+    param([string]$Key)
+    try {
+        $val = azd env get-value $Key 2>$null
+        if ($LASTEXITCODE -ne 0) { return "" }
+        if ($null -eq $val) { return "" }
+        return "$val".Trim()
+    } catch { return "" }
+}
+
+function Set-AzdEnv {
+    param([string]$Key, [string]$Value)
+    if ([string]::IsNullOrWhiteSpace($Value)) { $Value = "" }
+    azd env set "$Key" "$Value" 2>$null
+}
+
+# ─── Main ────────────────────────────────────────────────────────────────────────
+
 Write-Host "=== Postprovision: configuring resources ==="
 
 # ─── Ensure Service Principal exists for Bot App Registration ─────────────────
@@ -22,23 +42,6 @@ $RootDir0 = Split-Path -Parent $ScriptDir0
 $EntraBuildDir = Join-Path $RootDir0 "infra\entra\build"
 if (-not (Test-Path $EntraBuildDir)) {
     New-Item -ItemType Directory -Path $EntraBuildDir -Force | Out-Null
-}
-
-# Helper: get azd env var (robust version)
-function Get-AzdEnv {
-    param([string]$Key)
-    try {
-        $val = azd env get-value $Key 2>$null
-        if ($LASTEXITCODE -ne 0) { return "" }
-        if ($null -eq $val) { return "" }
-        return "$val".Trim()
-    } catch { return "" }
-}
-
-function Set-AzdEnv {
-    param([string]$Key, [string]$Value)
-    if ([string]::IsNullOrWhiteSpace($Value)) { $Value = "" }
-    azd env set "$Key" "$Value" 2>$null
 }
 
 # ─── Cross-RG Azure OpenAI Role Assignment ───────────────────────────────────────
@@ -113,6 +116,27 @@ if ($UseAcr -eq "true" -and $AcrName) {
             }
         } catch {
             Write-Host "  Warning: Could not assign AcrPull role. Assign manually if needed."
+        }
+
+        # Configure ACR registry on the Container App with managed identity
+        $AcaName = Get-AzdEnv "ACA_NAME"
+        if ([string]::IsNullOrWhiteSpace($AcaName)) { $AcaName = Get-AzdEnv "acaName" }
+        $AcaRg = Get-AzdEnv "AZURE_RESOURCE_GROUP"
+        $AcrLoginServer = "${AcrName}.azurecr.io"
+
+        if ($AcaName -and $AcaRg) {
+            Write-Host "  Configuring ACR registry on Container App ($AcaName)..."
+            try {
+                az containerapp registry set `
+                    --name $AcaName `
+                    --resource-group $AcaRg `
+                    --server $AcrLoginServer `
+                    --identity system `
+                    --output none 2>$null
+                Write-Host "  ACR registry configured."
+            } catch {
+                Write-Host "  Warning: Could not configure ACR registry on Container App."
+            }
         }
     }
 }
