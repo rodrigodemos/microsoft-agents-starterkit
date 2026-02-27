@@ -18,7 +18,7 @@
     "full": "A starter kit for a multi-agent orchestrator built with Microsoft Agent Framework. Includes an orchestrator agent that delegates to specialist sub-agents via the agent-as-tool pattern."
   },
   "icons": {
-    "color": "color.png",
+    "color": "agent-framework-192.png",
     "outline": "outline.png"
   },
   "accentColor": "#60A18E",

@@ -38,6 +38,7 @@ provision:
       name: ${{APP_DISPLAY_NAME}}${{APP_NAME_SUFFIX}}
       messagingEndpoint: ${{BOT_ENDPOINT}}/api/messages
       description: "Multi-agent orchestrator starter kit"
+      iconUrl: https://raw.githubusercontent.com/rodrigodemos/microsoft-agents-starterkit/refs/heads/main/appPackage/agent-framework-96.png
       channels:
         - name: msteams
 
