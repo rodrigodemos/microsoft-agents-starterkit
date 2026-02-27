@@ -6,14 +6,14 @@ provision:
   # Creates a Teams app
   - uses: teamsApp/create
     with:
-      name: AgentsStarterKit${{APP_NAME_SUFFIX}}
+      name: ${{APP_DISPLAY_NAME}}${{APP_NAME_SUFFIX}}
     writeToEnvironmentFile:
       teamsAppId: TEAMS_APP_ID
 
   # Create or reuse an existing Microsoft Entra application for bot
   - uses: aadApp/create
     with:
-      name: AgentsStarterKit${{APP_NAME_SUFFIX}}
+      name: ${{APP_DISPLAY_NAME}}${{APP_NAME_SUFFIX}}
       generateClientSecret: true
       generateServicePrincipal: true
       signInAudience: AzureADMyOrg
@@ -35,7 +35,7 @@ provision:
   - uses: botFramework/create
     with:
       botId: ${{BOT_ID}}
-      name: AgentsStarterKit
+      name: ${{APP_DISPLAY_NAME}}${{APP_NAME_SUFFIX}}
       messagingEndpoint: ${{BOT_ENDPOINT}}/api/messages
       description: "Multi-agent orchestrator starter kit"
       channels:

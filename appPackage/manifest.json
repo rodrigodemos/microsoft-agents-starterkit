@@ -10,7 +10,7 @@
     "termsOfUseUrl": "https://github.com/microsoft/agent-framework"
   },
   "name": {
-    "short": "Agents Starter Kit",
+    "short": "${{APP_DISPLAY_NAME}}",
     "full": "Microsoft Agents Starter Kit - Orchestrator with Sub-Agents"
   },
   "description": {
