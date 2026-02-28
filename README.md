@@ -1,6 +1,6 @@
 # Microsoft Agents Starter Kit
 
-A multi-agent orchestrator starter kit built with the [Microsoft Agent Framework](https://github.com/microsoft/agent-framework) (Python), hosted in **Microsoft Teams** via the **M365 Agents SDK**.
+A ready-to-go multi-agent orchestrator built with the [Microsoft Agent Framework](https://github.com/microsoft/agent-framework) (Python) and hosted in **Microsoft Teams** via the **M365 Agents SDK**. Clone it, add your own agents, and deploy, everything is wired up.
 
 ## Architecture
 
@@ -9,44 +9,41 @@ User (Teams) ──► M365 Host Server (aiohttp) ──► Orchestrator Agent
        │              SSO / OBO                       │
        │         (user identity flows)                ├──► Comedian Agent (as tool)
        └──────────────────────────────────────────────└──► [Add your agents here...]
-                                                           (tools execute OBO user)
+                                                            (tools execute OBO user)
 ```
 
-The **Orchestrator** is the main agent that receives user messages. It has specialist sub-agents registered as **tools** — the LLM decides when to delegate based on user intent.
+The **Orchestrator** is the main agent that receives user messages. It has specialist sub-agents registered as **tools**, the LLM decides when to delegate based on user intent.
 
 **Authentication**: All Azure services use **Entra ID** with chained credentials (Managed Identity → Azure CLI). No API keys. **SSO flows end-to-end**: user identity is passed from Teams → M365 → Orchestrator → Tools via On-Behalf-Of (OBO), so tools execute with delegated user access.
 
-Currently includes:
+The kit ships with two agents to get you started:
 
 | Agent | Description |
 |-------|-------------|
 | **Orchestrator** | Main agent that routes requests to specialists or answers directly |
 | **Comedian** | Tells jokes and funny stories on any topic |
 
-## Getting Started
-
-### Customize Your Agent
-
-Before deploying, update the following in [`appPackage/manifest.json`](appPackage/manifest.json):
-
-| Field | Description |
-|-------|-------------|
-| `name.short` | Your agent's display name in Teams (max 30 chars) |
-| `name.full` | Your agent's full name shown in app details (max 100 chars) |
-| `description.short` | Short description of your agent |
-| `description.full` | Full description of your agent |
-
-### Prerequisites
+## Prerequisites
 
 - **Python 3.11+**
 - **[uv](https://pypi.org/project/uv/)** package manager: `pip install uv`
-- **Azure OpenAI** resource with a deployed model (e.g., `gpt-4o-mini`) — your identity must have the **Cognitive Services OpenAI User** role
-- **Azure CLI** installed and authenticated: `az login`
-- **[Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd)** (`azd`) — for deploying to Azure
 - **Azure subscription**
-- **[Microsoft 365 Agents Toolkit](https://learn.microsoft.com/en-us/microsoftteams/platform/toolkit/overview-agents-toolkit)** VS Code extension (for Teams deployment)
+- **Microsoft Foundry** or **Azure OpenAI** with a deployed model (e.g., `gpt-4o-mini`)
+- **Cognitive Services OpenAI User** role for your identity
+- **Azure CLI** installed and authenticated: `az login`
 
-## Setup
+You will also need the following depending on how you run the project:
+
+| Tool | Local standalone | Teams debug | Deploy to Azure |
+|------|:---:|:---:|:---:|
+| **[Microsoft 365 Agents Toolkit](https://learn.microsoft.com/en-us/microsoftteams/platform/toolkit/overview-agents-toolkit)** (VS Code extension) | | x | x |
+| **[Azure Developer CLI (`azd`)](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd)** | | | x |
+| **Docker** (if using ACR) | | | x |
+| **Entra ID app registration** with a client secret | | | x |
+
+## Getting Started
+
+There are two ways to work with this project: **run locally** (with or without Teams) for development, or **deploy to Azure**.
 
 ### 1. Clone and install dependencies
 
@@ -56,11 +53,17 @@ cd microsoft-agents-starterkit
 uv sync --prerelease=allow
 ```
 
-`uv sync` automatically creates a `.venv` virtual environment and installs all dependencies from `pyproject.toml`. No manual venv activation needed — `uv run` (used below) always runs inside the managed venv.
+`uv sync` automatically creates a `.venv` virtual environment and installs all dependencies from `pyproject.toml`. No manual venv activation needed, `uv run` (used below) always runs inside the managed venv.
 
-### 2. Configure Azure OpenAI
+### 2. Configure your environment
 
-Edit `env/.env.local` and fill in your Azure OpenAI settings:
+Copy the example environment file and fill in your Azure OpenAI settings:
+
+```bash
+cp env/.env.local.example env/.env.local
+```
+
+Then edit `env/.env.local` with your values:
 
 ```env
 AZURE_OPENAI_ENDPOINT=https://<your-resource>.openai.azure.com/
@@ -68,44 +71,36 @@ AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini
 AZURE_OPENAI_API_VERSION=2024-12-01-preview
 ```
 
-Authentication uses **chained credentials**: Managed Identity (in Azure) → Azure CLI (local dev). Ensure `az login` is done for local development.
+Authentication uses **chained credentials**: Managed Identity (in Azure) → Azure CLI (local dev). Make sure you have run `az login` for local development.
 
-> **Note:** The `.env` file is auto-generated by the toolkit at debug time from `m365agents.local.yml`. Do not edit it directly — update values in `env/.env.local` instead.
+> **Note:** When debugging in Teams, the toolkit auto-generates a `.env` file in the project root from `m365agents.local.yml`. Do not edit `.env` directly, always update values in `env/.env.local` instead.
 
-### 3. Debug in Teams
+### 3. Run locally (without Teams)
 
-All the Agents Toolkit files are already included in this starter kit (`m365agents.local.yml`, `m365agents.yml`, `appPackage/`, `.vscode/`, `env/`).
-
-1. Install the **Microsoft 365 Agents Toolkit** extension in VS Code
-2. Open the project folder in VS Code — the toolkit auto-detects `m365agents.local.yml` and shows the agent
-3. In the Agents Toolkit panel, select **Local** environment → click **Debug** (or press F5)
-4. On first debug, the toolkit **auto-provisions**:
-   - An **Entra ID app registration** (BOT_ID)
-   - A **Bot Framework registration** on dev.botframework.com with Teams channel
-   - A **dev tunnel** to expose your local server to Teams
-5. The deploy step auto-generates `.env` in the project root with all runtime variables (CLIENT_ID, TENANT_ID, Azure OpenAI, SSO/OBO settings). **Do not edit `.env` directly** — update values in `env/.env.local` instead.
-
-### 4. Run standalone (without Teams)
-
-For quick local iteration without Teams, use the Agent Framework DevUI — a built-in web chat interface:
+The fastest way to try things out. The Agent Framework DevUI gives you a built-in web chat interface, no Teams account or Bot Framework setup needed:
 
 ```bash
 uv run python test_standalone.py
 ```
 
-This opens a browser at `http://localhost:8080` with a chat UI connected directly to the orchestrator agent (with the comedian tool). No Teams, no Bot Framework, no authentication required — just the agent framework and Azure OpenAI.
+This opens a browser at `http://localhost:8080` with a chat UI connected directly to the orchestrator agent (with the comedian tool). Just the agent framework and Azure OpenAI.
 
-> **Note:** SSO/OBO is not available in standalone mode. For full end-to-end testing with user identity, use the Teams debug flow (step 3).
+> **Note:** SSO/OBO is not available in standalone mode. For full end-to-end testing with user identity, use the Teams debug flow below.
+
+### 4. Run locally in Teams
+
+If you want to test the full Teams experience locally, all the Agents Toolkit files are already included (`m365agents.local.yml`, `m365agents.yml`, `appPackage/`, `.vscode/`, `env/`).
+
+1. Install the **Microsoft 365 Agents Toolkit** extension in VS Code
+2. Open the project folder in VS Code, the toolkit auto-detects `m365agents.local.yml` and shows the agent
+3. In the Agents Toolkit panel, select **Local** environment → click **Debug** (or press F5)
+4. On first debug, the toolkit **auto-provisions**:
+   - An **Entra ID app registration** (BOT_ID)
+   - A **Bot Framework registration** on dev.botframework.com with Teams channel
+   - A **dev tunnel** to expose your local server to Teams
+5. The deploy step auto-generates `.env` in the project root with all runtime variables (CLIENT_ID, TENANT_ID, Azure OpenAI, SSO/OBO settings). **Do not edit `.env` directly**, update values in `env/.env.local` instead.
 
 ## Deploy to Azure
-
-### Prerequisites
-
-- **Azure subscription**
-- **Azure CLI** (`az`) installed and logged in
-- **Azure Developer CLI** (`azd`) installed ([install guide](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd))
-- **Docker** (if using ACR path)
-- An **Entra ID app registration** with a client secret (for Bot Framework)
 
 ### Deploy with `azd up` (recommended)
 
@@ -113,20 +108,20 @@ This opens a browser at `http://localhost:8080` with a chat UI connected directl
 # Authenticate with Azure Developer CLI (one-time)
 azd auth login
 
-# Deploy — prompts for all configuration on first run
+# Deploy, prompts for all configuration on first run
 azd up
 ```
 
 On first run, `azd up` prompts for:
 1. **Environment name** (e.g., `dev`, `staging`, `prod`)
 2. **Azure subscription** and **location**
-3. **Bot credentials** (client ID, tenant ID, secret — auto-detects from `env/.env.local` if available)
-4. **Azure OpenAI** — create new or use existing (endpoint, resource group, subscription)
-5. **Container Registry** — create new, use existing, or none
-6. **Container App** — name and size
-7. **Log Analytics** — create new or use existing
+3. **Bot credentials** (client ID, tenant ID, secret, auto-detects from `env/.env.local` if available)
+4. **Azure OpenAI** create new or use existing (endpoint, resource group, subscription)
+5. **Container Registry** create new, use existing, or none
+6. **Container App** name and size
+7. **Log Analytics** create new or use existing
 
-All values are stored in `.azure/<env>/.env`. On subsequent runs, `azd up` reuses stored config and only updates changed resources — no prompts.
+All values are stored in `.azure/<env>/.env`. On subsequent runs, `azd up` reuses stored config and only updates changed resources, no prompts.
 
 **Multiple environments:**
 ```bash
@@ -144,33 +139,7 @@ azd env set AZURE_OPENAI_ENDPOINT "https://my-openai.openai.azure.com/"
 azd up
 ```
 
-#### Environment variable reference
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `BOT_CLIENT_ID` | Entra ID app client ID | _(required)_ |
-| `BOT_TENANT_ID` | Entra ID app tenant ID | _(required)_ |
-| `BOT_CLIENT_SECRET` | App registration client secret | _(required)_ |
-| `CREATE_AZURE_OPENAI` | `true` to create new, `false` for existing | `false` |
-| `AZURE_OPENAI_ENDPOINT` | Existing AOAI endpoint URL | |
-| `AZURE_OPENAI_RESOURCE_GROUP` | Resource group of existing AOAI | deployment RG |
-| `AZURE_OPENAI_SUBSCRIPTION` | Subscription of existing AOAI (if different) | current |
-| `AZURE_OPENAI_DEPLOYMENT` | Model deployment name | `gpt-4o-mini` |
-| `AZURE_OPENAI_API_VERSION` | API version | `2024-12-01-preview` |
-| `AZURE_OPENAI_NAME` | AOAI account name (new only) | `{env}-openai` |
-| `USE_ACR` | `true` to use ACR, `false` for source deploy | `false` |
-| `CREATE_ACR` | `true` to create new ACR, `false` for existing | `true` |
-| `ACR_NAME` | ACR name | |
-| `ACR_SKU` | SKU for new ACR | `Basic` |
-| `ACR_RESOURCE_GROUP` | Resource group of existing ACR | deployment RG |
-| `ACA_NAME` | Container App name | `{env}-app` |
-| `ACA_ENVIRONMENT_NAME` | ACA Environment name | `{env}-env` |
-| `ACA_CPU_CORES` | CPU cores | `0.25` |
-| `ACA_MEMORY_SIZE` | Memory | `0.5Gi` |
-| `LOG_ANALYTICS_NAME` | Log Analytics workspace name | `{env}-logs` |
-| `USE_EXISTING_LOG_ANALYTICS` | `true` to use existing workspace | `false` |
-| `LOG_ANALYTICS_RESOURCE_GROUP` | Resource group of existing workspace | deployment RG |
-| `LOG_ANALYTICS_SUBSCRIPTION` | Subscription of existing workspace | current |
+For a full list of environment variables and their defaults, see [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md).
 
 ### Deploy with scripts (alternative)
 
@@ -200,7 +169,7 @@ The script will:
 | Container App Environment | Hosting environment (Consumption tier) |
 | Container App | Runs the agent (scale to zero, system-assigned MI) |
 | Container Registry | Stores container images (optional) |
-| Azure OpenAI | LLM provider (optional — can use existing) |
+| Azure OpenAI | LLM provider (optional, can use existing) |
 | Azure Bot Service | Bot Framework registration with Teams + M365 channels |
 | Log Analytics | Monitoring and logs |
 | Role Assignment | Cognitive Services OpenAI User for ACA managed identity |
@@ -212,7 +181,7 @@ After infrastructure deployment, publish the Teams app using M365 Agents Toolkit
 1. Update `env/.env.azure` with the deployed ACA endpoint (auto-generated by the deploy script)
 2. In VS Code, open the Agents Toolkit panel
 3. Select **Azure** environment
-4. Click **Provision** — this creates the Teams app registration and bot framework registration
+4. Click **Provision** this creates the Teams app registration and bot framework registration
 5. The toolkit publishes the app to your organization's app catalog
 
 ### Teams admin approval
@@ -236,15 +205,15 @@ To make the agent available as a plugin in M365 Copilot:
 The included workflow (`.github/workflows/deploy.yml`) auto-deploys on push to `main`:
 
 1. **Configure GitHub secrets** (Settings > Secrets and variables > Actions):
-   - `AZURE_CLIENT_ID` — service principal client ID (for OIDC login)
-   - `AZURE_TENANT_ID` — tenant ID
-   - `AZURE_SUBSCRIPTION_ID` — subscription ID
+   - `AZURE_CLIENT_ID`
+   - `AZURE_TENANT_ID`
+   - `AZURE_SUBSCRIPTION_ID`
 
 2. **Configure GitHub variables** (Settings > Secrets and variables > Actions > Variables):
-   - `AZURE_RESOURCE_GROUP` — resource group name
-   - `ACR_LOGIN_SERVER` — ACR login server (e.g., `myacr.azurecr.io`)
-   - `ACR_NAME` — ACR name
-   - `ACA_NAME` — Container App name
+   - `AZURE_RESOURCE_GROUP`
+   - `ACR_LOGIN_SERVER` (e.g., `myacr.azurecr.io`)
+   - `ACR_NAME`
+   - `ACA_NAME` Container App name
 
 3. Push to `main` triggers build and deploy. Adding a new agent just requires a push.
 
@@ -295,12 +264,12 @@ Update the orchestrator's system prompt to mention the new agent so the LLM know
 
 ### Step 3: Test locally
 
-1. **DevUI** (quick iteration): `uv run python test_standalone.py` — opens http://localhost:8080
+1. **DevUI** (quick iteration): `uv run python test_standalone.py` opens http://localhost:8080
 2. **Teams** (full E2E): Press F5 in VS Code to debug in Teams
 
 ### Step 4: Deploy
 
-Push to `main` — GitHub Actions automatically rebuilds and redeploys the container.
+Push to `main` GitHub Actions automatically rebuilds and redeploys the container.
 
 Or redeploy manually:
 ```bash
@@ -310,60 +279,6 @@ azd deploy
 # Or with ACR directly
 az acr build --registry <acr-name> --resource-group <rg> --image agent:latest .
 az containerapp update --name <aca-name> --resource-group <rg> --image <acr>.azurecr.io/agent:latest
-```
-
-## Project Structure
-
-```
-microsoft-agents-starterkit/
-├── pyproject.toml                      # Dependencies and project config
-├── Dockerfile                          # Container build for Azure deployment
-├── azure.yaml                          # Azure Developer CLI (azd) config
-├── .gitignore                          # Git ignore rules
-├── README.md                           # This file
-├── start.py                            # Entry point
-├── agent_interface.py                  # Abstract base class for hosted agents
-├── host_agent_server.py                # M365-compatible aiohttp host server
-├── local_authentication_options.py     # Local auth config helper
-├── token_cache.py                      # Token caching for observability
-├── agents/
-│   ├── __init__.py                     # Exports OrchestratorAgent
-│   ├── comedian.py                     # Comedian sub-agent
-│   └── orchestrator.py                 # Orchestrator (main agent)
-├── infra/
-│   ├── main.bicep                      # Bicep orchestrator (composes modules)
-│   ├── main.parameters.json            # azd parameter mappings (env vars → Bicep)
-│   ├── deploy.sh                       # Bash deployment script (alternative)
-│   ├── deploy.ps1                      # PowerShell deployment script (alternative)
-│   └── modules/
-│       ├── container-app-environment.bicep
-│       ├── container-app.bicep
-│       ├── container-registry.bicep
-│       ├── azure-openai.bicep
-│       ├── bot-service.bicep
-│       └── managed-identity-roles.bicep
-├── hooks/
-│   ├── preprovision.sh                 # azd hook: validate config, set defaults
-│   ├── preprovision.ps1                # azd hook: Windows equivalent
-│   ├── postprovision.sh                # azd hook: cross-RG roles, generate env file
-│   └── postprovision.ps1               # azd hook: Windows equivalent
-├── .github/
-│   └── workflows/
-│       └── deploy.yml                  # CI/CD: build + deploy to ACA
-├── appPackage/
-│   ├── manifest.json                   # Teams app manifest (variable placeholders)
-│   ├── color.png                       # App icon (color, 192x192)
-│   └── outline.png                     # App icon (outline, 32x32)
-├── m365agents.yml                      # Agents Toolkit — project config
-├── m365agents.local.yml                # Agents Toolkit — local debug workflow
-├── m365agents.azure.yml                # Agents Toolkit — Azure publish workflow
-├── m365agents.playground.yml           # Agents Toolkit — offline playground testing
-├── env/
-│   ├── .env.local                      # Local debug env (auto-filled by toolkit)
-│   └── .env.azure                      # Azure env (auto-filled by azd or deploy script)
-└── .vscode/
-    ├── launch.json                     # Debug configurations
-    └── tasks.json                      # Build/provision tasks
 ```
 
 ## Key Concepts
