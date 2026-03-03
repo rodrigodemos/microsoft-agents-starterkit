@@ -17,6 +17,7 @@ from agent_framework.azure import AzureOpenAIChatClient
 from agent_framework_devui import serve
 
 from agents.comedian import create_comedian_agent
+from agents.graph_user_profile import RequestContext
 from agents.orchestrator import ORCHESTRATOR_INSTRUCTIONS
 
 load_dotenv()
@@ -41,7 +42,7 @@ client = AzureOpenAIChatClient(
     api_version=api_version,
 )
 
-comedian = create_comedian_agent(client)
+comedian = create_comedian_agent(client, RequestContext())
 
 agent = Agent(
     name="Orchestrator",
