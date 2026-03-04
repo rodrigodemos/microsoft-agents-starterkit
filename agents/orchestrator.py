@@ -22,6 +22,7 @@ from azure.identity import ChainedTokenCredential, ManagedIdentityCredential, Az
 
 from agent_interface import AgentInterface
 from agents.comedian import create_comedian_agent
+from agents.graph_user_profile import RequestContext
 from microsoft_agents.hosting.core import Authorization, TurnContext
 from microsoft_agents_a365.observability.extensions.agentframework.trace_instrumentor import (
     AgentFrameworkInstrumentor,
@@ -47,6 +48,7 @@ class OrchestratorAgent(AgentInterface):
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.request_context = RequestContext()
 
         self._enable_instrumentation()
         self._create_client()
@@ -92,7 +94,7 @@ class OrchestratorAgent(AgentInterface):
     def _create_agents(self):
         """Create the orchestrator and register sub-agents as tools."""
         # --- Create sub-agents ---
-        comedian = create_comedian_agent(self.chat_client)
+        comedian = create_comedian_agent(self.chat_client, self.request_context)
 
         # --- Register sub-agents as tools ---
         # To add a new agent: import its factory, create it, call .as_tool(), add to this list
@@ -157,6 +159,7 @@ class OrchestratorAgent(AgentInterface):
     ) -> str:
         try:
             await self.setup_mcp_servers(auth, auth_handler_name, context)
+            self.request_context.set(auth, auth_handler_name, context)
             result = await self.agent.run(message)
             return self._extract_result(result) or "I couldn't process your request at this time."
         except Exception as e:
