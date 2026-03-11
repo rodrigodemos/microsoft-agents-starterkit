@@ -39,3 +39,6 @@ infra/entra/build/
 # Misc
 *.log
 .python-version
+
+# Backup files
+*.old
