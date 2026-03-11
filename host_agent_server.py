@@ -48,12 +48,17 @@ from token_cache import cache_agentic_token
 # Configure app-level logging
 logging.basicConfig(level=logging.INFO, format="%(name)s - %(message)s")
 
-# Suppress noisy SDK loggers
-for noisy in ["microsoft_agents", "microsoft_agents_a365", "httpx", "opentelemetry", "azure", "aiohttp"]:
+# Suppress noisy SDK loggers (except auth-related ones for debugging)
+for noisy in ["microsoft_agents_a365", "httpx", "opentelemetry", "azure", "aiohttp"]:
     noisy_logger = logging.getLogger(noisy)
     noisy_logger.setLevel(logging.WARNING)
     noisy_logger.handlers.clear()
     noisy_logger.propagate = True
+
+# Enable debug logging for auth/OBO flow
+logging.getLogger("microsoft_agents.authentication").setLevel(logging.DEBUG)
+logging.getLogger("microsoft_agents.hosting.core.app.oauth").setLevel(logging.DEBUG)
+logging.getLogger("microsoft_agents.hosting.core.authorization").setLevel(logging.DEBUG)
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +150,7 @@ class GenericAgentHost:
         self.agent_app.conversation_update("membersAdded", **handler_config)(help_handler)
         self.agent_app.message("/help", **handler_config)(help_handler)
 
-        @self.agent_app.activity("message")
+        @self.agent_app.activity("message", **handler_config)
         async def on_message(context: TurnContext, _: TurnState):
             try:
                 result = await self._validate_agent_and_setup_context(context)
@@ -211,12 +216,21 @@ class GenericAgentHost:
             await self.agent_instance.initialize()
 
     def create_auth_configuration(self) -> AgentAuthConfiguration | None:
-        """Create auth config from Entra ID app registration (no secrets — uses managed identity)."""
+        """Create auth config from Entra ID app registration.
+
+        Uses CLIENT_ID (bot app registration) for incoming JWT validation.
+        The Agent Identity Blueprint is used separately for OBO token exchange
+        via the AGENTIC auth handler and BLUEPRINT_CONNECTION.
+        """
         client_id = environ.get("CLIENT_ID")
         tenant_id = environ.get("TENANT_ID")
 
         if client_id and tenant_id:
-            logger.info("Using Entra ID authentication (SSO / OBO enabled)")
+            blueprint_id = environ.get("AGENT_BLUEPRINT_CLIENT_ID")
+            model = "Agent Identity" if blueprint_id else "Bot App"
+            logger.info(f"Using Entra ID authentication ({model}, SSO / OBO enabled)")
+            if blueprint_id:
+                logger.info(f"Agent Identity Blueprint: {blueprint_id}")
             return AgentAuthConfiguration(
                 client_id=client_id,
                 tenant_id=tenant_id,

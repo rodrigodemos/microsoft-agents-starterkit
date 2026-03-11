@@ -25,6 +25,9 @@
     "existingLogCustomerId": { "value": "${EXISTING_LOG_CUSTOMER_ID}" },
     "existingLogSharedKey": { "value": "${EXISTING_LOG_SHARED_KEY}" },
     "acaEnvironmentName": { "value": "${ACA_ENVIRONMENT_NAME}" },
-    "botServiceName": { "value": "${BOT_SERVICE_NAME}" }
+    "botServiceName": { "value": "${BOT_SERVICE_NAME}" },
+    "agentBlueprintClientId": { "value": "${AGENT_BLUEPRINT_CLIENT_ID}" },
+    "agentIdentityClientId": { "value": "${AGENT_IDENTITY_CLIENT_ID}" },
+    "agentBlueprintClientSecret": { "value": "${AGENT_BLUEPRINT_CLIENT_SECRET}" }
   }
 }

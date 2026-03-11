@@ -10,6 +10,18 @@ These are the environment variables used when deploying to Azure with `azd up`. 
 | `BOT_TENANT_ID` | Entra ID app tenant ID | _(required)_ |
 | `BOT_CLIENT_SECRET` | App registration client secret | _(required)_ |
 
+## Agent Identity (Entra Agent ID)
+
+These variables are set automatically when using the Agent Identity setup during `azd up`.
+They enable the new [Entra Agent Identity OBO flow](https://learn.microsoft.com/en-us/entra/agent-id/identity-platform/agent-on-behalf-of-oauth-flow).
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AGENT_BLUEPRINT_CLIENT_ID` | Agent Identity Blueprint app client ID | _(optional)_ |
+| `AGENT_IDENTITY_CLIENT_ID` | Agent Identity client ID | _(optional)_ |
+| `AGENT_BLUEPRINT_CLIENT_SECRET` | Blueprint client secret (transition credential) | _(optional)_ |
+| `SETUP_AGENT_IDENTITY` | Set to `true` to create Agent Identity during postprovision | `false` |
+
 ## Azure OpenAI
 
 | Variable | Description | Default |

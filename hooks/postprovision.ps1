@@ -141,6 +141,87 @@ if ($UseAcr -eq "true" -and $AcrName) {
     }
 }
 
+# ─── Agent Identity Setup ────────────────────────────────────────────────────────
+
+$SetupAgentIdentity = Get-AzdEnv "SETUP_AGENT_IDENTITY"
+$ExistingBlueprintId = Get-AzdEnv "AGENT_BLUEPRINT_CLIENT_ID"
+
+if ($SetupAgentIdentity -eq "true" -and [string]::IsNullOrWhiteSpace($ExistingBlueprintId)) {
+    $ScriptDir1 = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $SetupScript = Join-Path $ScriptDir1 "setup-agent-identity.ps1"
+    $BotTenantId1 = Get-AzdEnv "BOT_TENANT_ID"
+    $NamePrefix1 = Get-AzdEnv "AZURE_NAME_PREFIX"
+    $AcaPrincipalId1 = Get-AzdEnv "acaPrincipalId"
+    if ([string]::IsNullOrWhiteSpace($AcaPrincipalId1)) {
+        $AcaPrincipalId1 = Get-AzdEnv "SERVICE_AGENT_PRINCIPAL_ID"
+    }
+
+    if (Test-Path $SetupScript) {
+        Write-Host "  Running Agent Identity setup..."
+        $agentResult = & $SetupScript `
+            -TenantId $BotTenantId1 `
+            -DisplayName "$NamePrefix1-agent" `
+            -ManagedIdentityPrincipalId $AcaPrincipalId1
+
+        if ($agentResult -and $agentResult.BlueprintAppId) {
+            Set-AzdEnv "AGENT_BLUEPRINT_CLIENT_ID" $agentResult.BlueprintAppId
+            Set-AzdEnv "AGENT_BLUEPRINT_OBJECT_ID" $agentResult.BlueprintObjectId
+            Set-AzdEnv "AGENT_BLUEPRINT_SCOPE_ID" $agentResult.BlueprintScopeId
+            Set-AzdEnv "AGENT_IDENTITY_CLIENT_ID" $agentResult.AgentIdentityAppId
+            Set-AzdEnv "AGENT_IDENTITY_OBJECT_ID" $agentResult.AgentIdentityObjectId
+            if (-not [string]::IsNullOrWhiteSpace($agentResult.BlueprintSecret)) {
+                Set-AzdEnv "AGENT_BLUEPRINT_CLIENT_SECRET" $agentResult.BlueprintSecret
+            }
+            Write-Host "  Agent Identity setup complete."
+
+            # Update Container App with Agent Identity env vars
+            $AcaName1 = Get-AzdEnv "ACA_NAME"
+            if ([string]::IsNullOrWhiteSpace($AcaName1)) { $AcaName1 = Get-AzdEnv "acaName" }
+            $AcaRg1 = Get-AzdEnv "AZURE_RESOURCE_GROUP"
+
+            if ($AcaName1 -and $AcaRg1) {
+                Write-Host "  Updating Container App with Agent Identity environment variables..."
+                az containerapp update `
+                    --name $AcaName1 `
+                    --resource-group $AcaRg1 `
+                    --set-env-vars `
+                        "AGENT_BLUEPRINT_CLIENT_ID=$($agentResult.BlueprintAppId)" `
+                        "AGENT_IDENTITY_CLIENT_ID=$($agentResult.AgentIdentityAppId)" `
+                        "AUTH_HANDLER_NAME=AGENTIC" `
+                        "AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__TYPE=AgenticUserAuthorization" `
+                        "AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__SCOPES=https://graph.microsoft.com/.default" `
+                        "AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__ALTERNATEBLUEPRINTCONNECTIONNAME=BLUEPRINT_CONNECTION" `
+                        "CONNECTIONS__BLUEPRINT_CONNECTION__SETTINGS__CLIENTID=$($agentResult.BlueprintAppId)" `
+                        "CONNECTIONS__BLUEPRINT_CONNECTION__SETTINGS__TENANTID=$BotTenantId1" `
+                        "CONNECTIONS__BLUEPRINT_CONNECTION__SETTINGS__AUTHTYPE=ClientSecret" `
+                    --output none 2>$null
+
+                # Set the blueprint secret separately (as a secret ref)
+                if (-not [string]::IsNullOrWhiteSpace($agentResult.BlueprintSecret)) {
+                    az containerapp secret set `
+                        --name $AcaName1 `
+                        --resource-group $AcaRg1 `
+                        --secrets "blueprint-client-secret=$($agentResult.BlueprintSecret)" `
+                        --output none 2>$null
+
+                    az containerapp update `
+                        --name $AcaName1 `
+                        --resource-group $AcaRg1 `
+                        --set-env-vars `
+                            "CONNECTIONS__BLUEPRINT_CONNECTION__SETTINGS__CLIENTSECRET=secretref:blueprint-client-secret" `
+                        --output none 2>$null
+                }
+
+                Write-Host "  Container App updated with Agent Identity configuration."
+            }
+        } else {
+            Write-Host "WARNING: Agent Identity setup did not return expected results."
+        }
+    } else {
+        Write-Host "WARNING: setup-agent-identity.ps1 not found at $SetupScript"
+    }
+}
+
 # ─── Generate env/.env.azure ─────────────────────────────────────────────────────
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -160,6 +241,8 @@ $AcaName = Get-AzdEnv "ACA_NAME"
 if ([string]::IsNullOrWhiteSpace($AcaName)) { $AcaName = Get-AzdEnv "acaName" }
 $AcrName = Get-AzdEnv "ACR_NAME"
 $UseAcr = Get-AzdEnv "USE_ACR"
+$AgentBlueprintClientId = Get-AzdEnv "AGENT_BLUEPRINT_CLIENT_ID"
+$AgentIdentityClientId = Get-AzdEnv "AGENT_IDENTITY_CLIENT_ID"
 
 # Set AZURE_CONTAINER_REGISTRY_ENDPOINT for azd deploy
 if ($UseAcr -eq "true" -and $AcrName) {
@@ -186,6 +269,13 @@ AZURE_OPENAI_API_VERSION=$AoaiApiVersion
 RESOURCE_GROUP=$ResourceGroup
 ACA_NAME=$AcaName
 "@
+
+if (-not [string]::IsNullOrWhiteSpace($AgentBlueprintClientId)) {
+    $envContent += "`nAGENT_BLUEPRINT_CLIENT_ID=$AgentBlueprintClientId"
+}
+if (-not [string]::IsNullOrWhiteSpace($AgentIdentityClientId)) {
+    $envContent += "`nAGENT_IDENTITY_CLIENT_ID=$AgentIdentityClientId"
+}
 
 if ($AcrLoginServer) {
     $envContent += "`nACR_LOGIN_SERVER=$AcrLoginServer"

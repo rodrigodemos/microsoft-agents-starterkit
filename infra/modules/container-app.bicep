@@ -45,6 +45,22 @@ param memorySize string = '0.5Gi'
 @description('ACR login server (e.g., myacr.azurecr.io). Empty if no ACR.')
 param acrLoginServer string = ''
 
+// ─── Agent Identity Parameters ─────────────────────────────────────────────────
+
+@description('Agent Identity Blueprint client ID (empty = skip Agent Identity config)')
+param agentBlueprintClientId string = ''
+
+@description('Agent Identity client ID')
+param agentIdentityClientId string = ''
+
+@secure()
+@description('Agent Identity Blueprint client secret (transition credential)')
+param agentBlueprintClientSecret string = ''
+
+// Determine whether Agent Identity is configured
+var hasAgentIdentity = agentBlueprintClientId != ''
+var hasAgentBlueprintSecret = agentBlueprintClientSecret != ''
+
 resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: name
   location: location
@@ -69,12 +85,17 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
           identity: 'system'
         }
       ] : []
-      secrets: [
+      secrets: concat([
         {
           name: 'bot-client-secret'
           value: botClientSecret
         }
-      ]
+      ], hasAgentBlueprintSecret ? [
+        {
+          name: 'blueprint-client-secret'
+          value: agentBlueprintClientSecret
+        }
+      ] : [])
     }
     template: {
       containers: [
@@ -85,7 +106,7 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
             cpu: json(cpuCores)
             memory: memorySize
           }
-          env: [
+          env: concat([
             { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenAiEndpoint }
             { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenAiDeployment }
             { name: 'AZURE_OPENAI_API_VERSION', value: azureOpenAiApiVersion }
@@ -98,7 +119,20 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'CONNECTIONSMAP_0_SERVICEURL', value: '*' }
             { name: 'CONNECTIONSMAP_0_CONNECTION', value: 'SERVICE_CONNECTION' }
             { name: 'PORT', value: '3978' }
-          ]
+          ], hasAgentIdentity ? [
+            // Agent Identity configuration
+            { name: 'AGENT_BLUEPRINT_CLIENT_ID', value: agentBlueprintClientId }
+            { name: 'AGENT_IDENTITY_CLIENT_ID', value: agentIdentityClientId }
+            { name: 'AUTH_HANDLER_NAME', value: 'AGENTIC' }
+            { name: 'AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__TYPE', value: 'UserAuthorization' }
+            { name: 'AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__AZUREBOTOAUTHCONNECTIONNAME', value: 'AgentIdentityOBO' }
+            { name: 'AGENTAPPLICATION__USERAUTHORIZATION__HANDLERS__AGENTIC__SETTINGS__SCOPES', value: '' }
+            { name: 'CONNECTIONS__BLUEPRINT_CONNECTION__SETTINGS__CLIENTID', value: agentBlueprintClientId }
+            { name: 'CONNECTIONS__BLUEPRINT_CONNECTION__SETTINGS__TENANTID', value: botTenantId }
+            { name: 'CONNECTIONS__BLUEPRINT_CONNECTION__SETTINGS__AUTHTYPE', value: 'ClientSecret' }
+          ] : [], hasAgentBlueprintSecret ? [
+            { name: 'CONNECTIONS__BLUEPRINT_CONNECTION__SETTINGS__CLIENTSECRET', secretRef: 'blueprint-client-secret' }
+          ] : [])
         }
       ]
       scale: {

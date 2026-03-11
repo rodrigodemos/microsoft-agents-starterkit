@@ -286,6 +286,7 @@ az containerapp update --name <aca-name> --resource-group <rg> --image <acr>.azu
 - **Agent-as-tool pattern**: Sub-agents are converted to function tools via `.as_tool()` and provided to the orchestrator. The LLM decides when to delegate.
 - **Entra ID authentication**: All Azure services use `ChainedTokenCredential(ManagedIdentityCredential(), AzureCliCredential())`. No API keys anywhere.
 - **SSO / On-Behalf-Of (OBO)**: User identity flows end-to-end: User → Teams → M365 → Orchestrator → Tools. MCP tools and external services execute with the user's delegated access via the `AGENTIC` auth handler and OBO token exchange.
+- **Entra Agent Identity (preview)**: For Azure deployments, the project supports the new [Entra Agent Identity model](https://learn.microsoft.com/en-us/entra/agent-id/identity-platform/agent-on-behalf-of-oauth-flow) with a two-tier hierarchy (Agent Identity Blueprint + Agent Identity). This provides agent-specific OBO flows with managed identity support. See [Agent Identity Setup](#agent-identity-entra-agent-id) below.
 - **Microsoft Agent Framework**: Provides `Agent`, `ChatAgent`, and `AzureOpenAIChatClient` for building AI agents with tool support, multi-turn conversations, and streaming.
 - **M365 Agents SDK**: Provides `CloudAdapter`, `AgentApplication`, and `AgentNotification` for hosting agents in Teams, Outlook, and other M365 surfaces.
 - **Agent 365 Observability**: Built-in tracing and telemetry via `AgentFrameworkInstrumentor`.
@@ -295,6 +296,63 @@ az containerapp update --name <aca-name> --resource-group <rg> --image <acr>.azu
 - **Agents Playground**: Test locally without a Teams tenant using the [Agent 365 CLI](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/agent-365-cli)
 - **Teams**: Deploy via the Agents Toolkit for end-to-end testing in Teams
 
+## Agent Identity (Entra Agent ID)
+
+For Azure deployments, this project supports the new [Entra Agent Identity OBO flow](https://learn.microsoft.com/en-us/entra/agent-id/identity-platform/agent-on-behalf-of-oauth-flow) (preview). This replaces the traditional single-app OBO with a two-tier hierarchy:
+
+```
+Agent Identity Blueprint (parent app)
+  └── Agent Identity (child, performs OBO)
+```
+
+### How it works
+
+1. **User authenticates** via Teams SSO → user token (Tc)
+2. **Blueprint authenticates** using its credential → T1 (via `client_credentials` with `fmi_path`)
+3. **Agent Identity exchanges** T1 + Tc → resource token (via `jwt-bearer` OBO)
+
+### Prerequisites
+
+- Microsoft 365 Copilot license with [Frontier program](https://adoption.microsoft.com/copilot/frontier-program/) enabled
+- **Agent ID Developer** or **Agent ID Administrator** role in Entra ID
+- Azure CLI authenticated (`az login`)
+
+### Setup (automatic via `azd up`)
+
+During `azd up`, the preprovision hook asks whether to set up Agent Identity. If selected, the postprovision hook automatically:
+
+1. Creates the **Agent Identity Blueprint** via Microsoft Graph beta API
+2. Configures identifier URI and `access_agent` scope
+3. Pre-authorizes Teams/M365 client apps
+4. Creates the **Blueprint Principal** (service principal)
+5. Creates the **Agent Identity** under the blueprint
+6. Configures **FIC** (Federated Identity Credential) with the ACA's managed identity
+7. Adds a transition client secret (until the SDK supports MI-as-FIC natively)
+8. Updates the Container App with the new environment variables
+
+### Setup (manual)
+
+If you prefer to set up Agent Identity manually:
+
+1. Follow the [Create a Blueprint](https://learn.microsoft.com/en-us/entra/agent-id/identity-platform/create-blueprint) guide
+2. Follow the [Create Agent Identities](https://learn.microsoft.com/en-us/entra/agent-id/identity-platform/create-delete-agent-identities) guide
+3. Set the following `azd` environment variables before deploying:
+
+```bash
+azd env set AGENT_BLUEPRINT_CLIENT_ID "<blueprint-app-id>"
+azd env set AGENT_IDENTITY_CLIENT_ID "<agent-identity-app-id>"
+azd env set AGENT_BLUEPRINT_CLIENT_SECRET "<blueprint-secret>"
+```
+
+### Local development
+
+Local dev continues to use the traditional OBO flow with the bot app registration and client secret. The Agent Identity model is only used for Azure deployments. No changes are needed for local debugging in Teams.
+
+### Current limitations
+
+- **Preview**: Agent Identity APIs use Microsoft Graph `/beta` endpoint and may change before GA
+- **SDK support**: The Microsoft Agents SDK (v0.8.x) uses a client secret for the blueprint connection. Full managed identity support (MI-as-FIC) will be adopted when the SDK adds native support for using MI tokens as `client_assertion` in `ConfidentialClientApplication`.
+
 ## References
 
 - [Microsoft Agent Framework](https://github.com/microsoft/agent-framework)
@@ -302,3 +360,6 @@ az containerapp update --name <aca-name> --resource-group <rg> --image <acr>.azu
 - [Agent-as-tool Pattern](https://learn.microsoft.com/en-us/agent-framework/agents/tools/#using-an-agent-as-a-function-tool)
 - [Agent 365 Quickstart (Python)](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/quickstart-python-agent-framework)
 - [M365 Agents Toolkit](https://learn.microsoft.com/en-us/microsoftteams/platform/toolkit/overview-agents-toolkit)
+- [Entra Agent Identity OBO Flow](https://learn.microsoft.com/en-us/entra/agent-id/identity-platform/agent-on-behalf-of-oauth-flow)
+- [Create Agent Identity Blueprint](https://learn.microsoft.com/en-us/entra/agent-id/identity-platform/create-blueprint)
+- [Entra SDK for Agent ID](https://learn.microsoft.com/en-us/entra/agent-id/identity-platform/microsoft-entra-sdk-for-agent-identities)

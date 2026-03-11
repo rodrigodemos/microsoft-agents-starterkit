@@ -95,6 +95,18 @@ param acaEnvironmentName string = '${namePrefix}-env'
 @description('Azure Bot Service name')
 param botServiceName string = '${namePrefix}-bot'
 
+// ─── Agent Identity Parameters ─────────────────────────────────────────────────
+
+@description('Agent Identity Blueprint client ID (from Entra Agent ID setup)')
+param agentBlueprintClientId string = ''
+
+@description('Agent Identity client ID (from Entra Agent ID setup)')
+param agentIdentityClientId string = ''
+
+@secure()
+@description('Agent Identity Blueprint client secret (transition credential)')
+param agentBlueprintClientSecret string = ''
+
 // ─── Tags ───────────────────────────────────────────────────────────────────────
 
 @description('Tags to apply to all resources')
@@ -172,6 +184,9 @@ module aca 'modules/container-app.bicep' = {
     botClientId: botClientId
     botTenantId: botTenantId
     botClientSecret: botClientSecret
+    agentBlueprintClientId: agentBlueprintClientId
+    agentIdentityClientId: agentIdentityClientId
+    agentBlueprintClientSecret: agentBlueprintClientSecret
     cpuCores: acaCpuCores
     memorySize: acaMemorySize
     acrLoginServer: '' // Registry is configured by azd deploy after postprovision assigns AcrPull

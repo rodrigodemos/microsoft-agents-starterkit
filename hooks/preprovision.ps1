@@ -330,5 +330,51 @@ if (-not $currentAoaiName) {
     Set-AzdEnv "AZURE_OPENAI_NAME" "$NamePrefix-openai"
 }
 
+# ─── Agent Identity (Entra Agent ID) ────────────────────────────────────────────
+
+Write-Host ""
+Write-Host "--- Agent Identity (Entra Agent ID) ---"
+Write-Host "Agent Identity enables the OBO token exchange using the new Entra Agent ID model."
+Write-Host "Prerequisites: Microsoft 365 Copilot + Frontier enabled, Agent ID Developer role."
+Write-Host ""
+
+$AgentBlueprintId = Get-AzdEnv "AGENT_BLUEPRINT_CLIENT_ID"
+$AgentIdentityId = Get-AzdEnv "AGENT_IDENTITY_CLIENT_ID"
+
+if ([string]::IsNullOrWhiteSpace($AgentBlueprintId)) {
+    Write-Host "Agent Identity options:"
+    Write-Host "  1) Create new Agent Identity Blueprint after provisioning (recommended)"
+    Write-Host "  2) Use existing Agent Identity Blueprint (provide IDs)"
+    Write-Host "  3) Skip Agent Identity setup (use traditional OBO with client secret)"
+    $agentIdChoice = Read-Host "Choice [1]"
+    if ([string]::IsNullOrWhiteSpace($agentIdChoice)) { $agentIdChoice = "1" }
+
+    switch ($agentIdChoice) {
+        "1" {
+            Set-AzdEnv "SETUP_AGENT_IDENTITY" "true"
+            Write-Host "  Agent Identity will be created during postprovision."
+        }
+        "2" {
+            Set-AzdEnv "SETUP_AGENT_IDENTITY" "false"
+            do { $AgentBlueprintId = Read-Host "Agent Identity Blueprint app ID (GUID)" } while ([string]::IsNullOrWhiteSpace($AgentBlueprintId))
+            do { $AgentIdentityId = Read-Host "Agent Identity app ID (GUID)" } while ([string]::IsNullOrWhiteSpace($AgentIdentityId))
+            $AgentBlueprintSecret = Read-Host "Agent Identity Blueprint client secret (leave blank if using certificate)"
+            Set-AzdEnv "AGENT_BLUEPRINT_CLIENT_ID" $AgentBlueprintId
+            Set-AzdEnv "AGENT_IDENTITY_CLIENT_ID" $AgentIdentityId
+            if (-not [string]::IsNullOrWhiteSpace($AgentBlueprintSecret)) {
+                Set-AzdEnv "AGENT_BLUEPRINT_CLIENT_SECRET" $AgentBlueprintSecret
+            }
+            Write-Host "  Using existing Agent Identity Blueprint: $AgentBlueprintId"
+        }
+        default {
+            Set-AzdEnv "SETUP_AGENT_IDENTITY" "false"
+            Write-Host "  Skipping Agent Identity setup. Traditional OBO will be used."
+        }
+    }
+} else {
+    Write-Host "  Agent Identity Blueprint already configured: $AgentBlueprintId"
+    Write-Host "  Agent Identity: $AgentIdentityId"
+}
+
 Write-Host ""
 Write-Host "=== Configuration complete ==="
